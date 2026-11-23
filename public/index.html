@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cap Users</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #090512;
+      --card: rgba(24, 12, 46, 0.85);
+      --neon: #a855f7;
+      --neon-bright: #d8b4fe;
+      --text: #f5f3ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(168, 85, 247, 0.25), transparent 55%),
+        var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 16px;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    #splash {
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      background: radial-gradient(circle at 50% 45%, #240b4c 0%, #07030e 78%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.32s ease, transform 0.32s ease;
+    }
+
+    #splash.hide {
+      opacity: 0;
+      transform: scale(1.05);
+      pointer-events: none;
+    }
+
+    .logo-lines {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      user-select: none;
+    }
+
+    .logo-line {
+      display: flex;
+      gap: 3px;
+      line-height: 1.05;
+      font-weight: 900;
+      font-size: 48px;
+      letter-spacing: -0.02em;
+    }
+
+    .line-top {
+      color: #f3e8ff;
+      text-shadow: 0 0 18px rgba(168, 85, 247, 0.9), 0 0 38px rgba(139, 92, 246, 0.55);
+    }
+
+    .line-bottom {
+      background: linear-gradient(90deg, #c084fc, #e879f9, #a855f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 16px rgba(192, 132, 252, 0.75));
+    }
+
+    .letter {
+      display: inline-block;
+      opacity: 0;
+      will-change: transform, opacity;
+      transform: translate3d(var(--tx, 0px), var(--ty, 100px), 0) rotate(var(--rot, 0deg)) scale(0.75);
+      animation: magSnap 0.4s cubic-bezier(0.08, 0.96, 0.18, 1.02) forwards;
+      animation-delay: var(--delay, 0s);
+    }
+
+    @keyframes magSnap {
+      0% {
+        opacity: 0;
+        transform: translate3d(var(--tx), var(--ty), 0) rotate(var(--rot)) scale(0.75);
+      }
+      20% { opacity: 1; }
+      82% { transform: translate3d(0px, 0px, 0) rotate(0deg) scale(1.06); }
+      100% {
+        opacity: 1;
+        transform: translate3d(0px, 0px, 0) rotate(0deg) scale(1);
+      }
+    }
+
+    #app {
+      opacity: 0;
+      transition: opacity 0.35s ease;
+    }
+
+    #app.ready { opacity: 1; }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .brand-mini {
+      font-weight: 900;
+      line-height: 1.02;
+      font-size: 18px;
+      text-shadow: 0 0 14px rgba(168, 85, 247, 0.7);
+    }
+
+    .brand-mini span {
+      display: block;
+      color: var(--neon-bright);
+    }
+
+    .ton-pill {
+      background: rgba(168, 85, 247, 0.16);
+      border: 1px solid rgba(192, 132, 252, 0.45);
+      box-shadow: 0 0 16px rgba(168, 85, 247, 0.25);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 13px;
+      color: #f3e8ff;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .tab-btn {
+      padding: 10px 8px;
+      border-radius: 12px;
+      border: 1px solid rgba(168, 85, 247, 0.28);
+      background: rgba(24, 12, 46, 0.65);
+      color: #d8b4fe;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, #7e22ce, #a855f7);
+      color: #fff;
+      border-color: #e9d5ff;
+      box-shadow: 0 0 18px rgba(168, 85, 247, 0.6);
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      box-shadow: 0 0 24px rgba(126, 34, 206, 0.16);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+      background: rgba(168, 85, 247, 0.25);
+      color: var(--neon-bright);
+      margin-left: 6px;
+    }
+
+    .badge.admin {
+      background: linear-gradient(135deg, #c026d3, #7e22ce);
+      color: #fff;
+      box-shadow: 0 0 12px rgba(192, 38, 211, 0.6);
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(192, 132, 252, 0.35);
+      background: rgba(10, 5, 20, 0.85);
+      color: #fff;
+      font-size: 14px;
+      margin-top: 8px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--neon-bright);
+      box-shadow: 0 0 12px rgba(168, 85, 247, 0.45);
+    }
+
+    .action-btn {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: transform 0.12s ease;
+    }
+
+    .action-btn:active { transform: scale(0.98); }
+
+    .btn-neon {
+      background: linear-gradient(135deg, #7e22ce, #a855f7);
+      color: #fff;
+      box-shadow: 0 0 18px rgba(168, 85, 247, 0.5);
+    }
+
+    .btn-vip {
+      background: linear-gradient(135deg, #c026d3, #9333ea);
+      color: #fff;
+      box-shadow: 0 0 18px rgba(192, 38, 211, 0.5);
+    }
+
+    .lot-card {
+      background: rgba(13, 6, 26, 0.8);
+      border: 1px solid rgba(192, 132, 252, 0.25);
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .buy-btn {
+      background: #a855f7;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div id="splash" onclick="finishSplash()">
+    <div class="logo-lines">
+      <div class="logo-line line-top" id="topLine"></div>
+      <div class="logo-line line-bottom" id="bottomLine"></div>
+    </div>
+  </div>
+
+  <div id="app">
+    <div class="topbar">
+      <div class="brand-mini">Cap<span>Users</span></div>
+      <div class="ton-pill" id="tonBalancePill">💎 0 TON</div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-search" onclick="switchTab('search')">Поиск</button>
+      <button class="tab-btn" id="tab-market" onclick="switchTab('market')">Маркет</button>
+      <button class="tab-btn" id="tab-wallet" onclick="switchTab('wallet')">Кошелёк</button>
+    </div>
+
+    <div id="view-search">
+      <div class="card">
+        <strong id="userName">Загрузка...</strong>
+        <span id="statusBadge" class="badge">Free</span>
+      </div>
+      <div class="card">
+        <button class="action-btn btn-neon" onclick="findCommon()">🎲 5 случайных юзов (Free)</button>
+        <button class="action-btn btn-vip" onclick="findRare()">⚡ 1 редкий юз (50 Stars / мес)</button>
+      </div>
+      <div id="searchResults" class="card hidden"></div>
+    </div>
+
+    <div id="view-market" class="hidden">
+      <div class="card">
+        <strong>Выставить свой юзернейм за TON</strong>
+        <input id="sellUsername" placeholder="Например: my_rare_tag" />
+        <input id="sellPrice" type="number" step="0.1" min="0.1" placeholder="Цена в TON (например: 10)" />
+        <button class="action-btn btn-neon" onclick="createListing()">Выставить на маркет</button>
+      </div>
+      <div class="card">
+        <strong>Ленты юзернеймов от пользователей</strong>
+        <div id="marketList">Загрузка маркета...</div>
+      </div>
+    </div>
+
+    <div id="view-wallet" class="hidden">
+      <div class="card">
+        <strong>Счёт TON в приложении</strong>
+        <p style="font-size:22px; font-weight:900; color:#d8b4fe; margin:8px 0;" id="walletBalanceText">0 TON</p>
+        <div style="font-size:12px; opacity:0.8; word-break:break-all;" id="walletAddrText">
+          Кошелёк не привязан
+        </div>
+        <input id="walletInput" placeholder="Привязать адрес TON (EQ... или UQ...)" />
+        <button class="action-btn btn-neon" onclick="bindWallet()">Привязать TON-кошелёк</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const topConfigs = [
+      { ch: 'C', tx: '-160px', ty: '-110px', rot: '-35deg', delay: '0.04s' },
+      { ch: 'a', tx: '10px',   ty: '-170px', rot: '25deg',  delay: '0.09s' },
+      { ch: 'p', tx: '165px',  ty: '-100px', rot: '35deg',  delay: '0.14s' }
+    ];
+    const bottomConfigs = [
+      { ch: 'U', tx: '-175px', ty: '115px',  rot: '-30deg', delay: '0.18s' },
+      { ch: 's', tx: '-75px',  ty: '175px',  rot: '24deg',  delay: '0.22s' },
+      { ch: 'e', tx: '0px',    ty: '185px',  rot: '-24deg', delay: '0.26s' },
+      { ch: 'r', tx: '80px',   ty: '170px',  rot: '28deg',  delay: '0.30s' },
+      { ch: 's', tx: '180px',  ty: '115px',  rot: '36deg',  delay: '0.34s' }
+    ];
+
+    function renderLogo() {
+      const topEl = document.getElementById('topLine');
+      const bottomEl = document.getElementById('bottomLine');
+      topConfigs.forEach(c => {
+        const el = document.createElement('span');
+        el.className = 'letter';
+        el.textContent = c.ch;
+        el.style.setProperty('--tx', c.tx);
+        el.style.setProperty('--ty', c.ty);
+        el.style.setProperty('--rot', c.rot);
+        el.style.setProperty('--delay', c.delay);
+        topEl.appendChild(el);
+      });
+      bottomConfigs.forEach(c => {
+        const el = document.createElement('span');
+        el.className = 'letter';
+        el.textContent = c.ch;
+        el.style.setProperty('--tx', c.tx);
+        el.style.setProperty('--ty', c.ty);
+        el.style.setProperty('--rot', c.rot);
+        el.style.setProperty('--delay', c.delay);
+        bottomEl.appendChild(el);
+      });
+    }
+
+    let splashDone = false;
+    function finishSplash() {
+      if (splashDone) return;
+      splashDone = true;
+      document.getElementById('splash').classList.add('hide');
+      document.getElementById('app').classList.add('ready');
+    }
+
+    renderLogo();
+    setTimeout(finishSplash, 900);
+
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+    const initData = tg.initData;
+    let isPremium = false;
+
+    function switchTab(tab) {
+      ['search', 'market', 'wallet'].forEach(t => {
+        document.getElementById(`view-${t}`).classList.toggle('hidden', t !== tab);
+        document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+      });
+      if (tab === 'market') loadMarket();
+    }
+
+    function updateTonUI(balanceTon, address) {
+      const val = Number(balanceTon || 0);
+      document.getElementById('tonBalancePill').innerText = `💎 ${val} TON`;
+      document.getElementById('walletBalanceText').innerText = `${val} TON`;
+      document.getElementById('walletAddrText').innerText = address
+        ? `Привязан: ${address}`
+        : 'Кошелёк не привязан';
+      if (address) document.getElementById('walletInput').value = address;
+    }
+
+    async function loadProfile() {
+      if (!initData) return;
+      const res = await fetch('/api/me', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData })
+      });
+      const data = await res.json();
+      if (data.error) return;
+
+      document.getElementById('userName').innerText = data.firstName || 'User';
+      isPremium = data.isPremium;
+      updateTonUI(data.balanceTon, data.walletAddress);
+
+      const badge = document.getElementById('statusBadge');
+      if (data.isAdmin) {
+        badge.innerText = 'ADMIN • FREE VIP';
+        badge.className = 'badge admin';
+      } else if (data.isPremium) {
+        badge.innerText = 'PREMIUM';
+      }
+    }
+
+    async function bindWallet() {
+      const address = document.getElementById('walletInput').value.trim();
+      const res = await fetch('/api/wallet/bind', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData, address })
+      });
+      const data = await res.json();
+      if (data.error) return tg.showAlert(data.error);
+      updateTonUI(data.balanceTon, data.walletAddress);
+      tg.showAlert('TON-кошелёк привязан!');
+    }
+
+    async function loadMarket() {
+      const res = await fetch('/api/market');
+      const data = await res.json();
+      const box = document.getElementById('marketList');
+      if (!data.listings || !data.listings.length) {
+        box.innerHTML = '<p style="opacity:0.7; font-size:13px;">Пока лотов нет — выстави первый!</p>';
+        return;
+      }
+      box.innerHTML = data.listings.map(lot => `
+        <div class="lot-card">
+          <div>
+            <div style="font-family:monospace; font-size:16px; font-weight:800;">@${lot.username}</div>
+            <div style="font-size:12px; opacity:0.75;">Продавец: ${lot.sellerName} • <b>${lot.priceTon} TON</b></div>
+          </div>
+          <button class="buy-btn" onclick="buyLot('${lot.id}')">Купить</button>
+        </div>
+      `).join('');
+    }
+
+    async function createListing() {
+      const username = document.getElementById('sellUsername').value.trim();
+      const priceTon = Number(document.getElementById('sellPrice').value);
+      const res = await fetch('/api/market/list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData, username, priceTon })
+      });
+      const data = await res.json();
+      if (data.error) return tg.showAlert(data.error);
+      document.getElementById('sellUsername').value = '';
+      document.getElementById('sellPrice').value = '';
+      tg.showAlert(`@${data.lot.username} выставлен за ${data.lot.priceTon} TON!`);
+      loadMarket();
+    }
+
+    async function buyLot(lotId) {
+      const res = await fetch('/api/market/buy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData, lotId })
+      });
+      const data = await res.json();
+      if (data.error) return tg.showAlert(data.error);
+      updateTonUI(data.balanceTon, document.getElementById('walletInput').value.trim());
+      tg.showAlert(`Куплен @${data.boughtUsername}!`);
+      loadMarket();
+    }
+
+    async function findCommon() {
+      const res = await fetch('/api/search/common', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData })
+      });
+      const data = await res.json();
+      if (!data.usernames) return;
+      const box = document.getElementById('searchResults');
+      box.classList.remove('hidden');
+      box.innerHTML = '<strong>5 случайных юзов:</strong>' + data.usernames.map(u => `
+        <div class="lot-card"><span>@${u}</span><a href="https://t.me/${u}" target="_blank" style="color:#d8b4fe;">Открыть ↗</a></div>
+      `).join('');
+    }
+
+    async function findRare() {
+      if (!isPremium) return buyPremium();
+      const res = await fetch('/api/search/rare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData })
+      });
+      const data = await res.json();
+      if (data.error) return buyPremium();
+      const box = document.getElementById('searchResults');
+      box.classList.remove('hidden');
+      box.innerHTML = `
+        <strong>⚡ Редкий юз:</strong>
+        <div class="lot-card">
+          <div>
+            <div style="font-family:monospace; font-size:16px;">@${data.rare.username}</div>
+            <div style="font-size:12px; opacity:0.75;">${data.rare.tag} • ${data.rare.estPrice}</div>
+          </div>
+          <a href="https://t.me/${data.rare.username}" target="_blank" style="color:#f0abfc;">Открыть ↗</a>
+        </div>
+      `;
+    }
+
+    async function buyPremium() {
+      const res = await fetch('/api/create-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData })
+      });
+      const data = await res.json();
+      if (!data.invoiceLink) return tg.showAlert(data.error || 'Ошибка оплаты');
+      tg.openInvoice(data.invoiceLink, async (status) => {
+        if (status === 'paid') {
+          tg.showAlert('Premium активирован на 30 дней!');
+          await loadProfile();
+        }
+      });
+    }
+
+    loadProfile();
+  </script>
+</body>
+  </html>
+  
